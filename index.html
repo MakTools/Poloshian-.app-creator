@@ -1,0 +1,242 @@
+<!DOCTYPE html><html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Advanced App Packager</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background: linear-gradient(to right, #283c86, #45a247);
+      color: #fff;
+      margin: 0;
+      padding: 20px;
+    }
+    .container {
+      max-width: 800px;
+      margin: auto;
+      background: rgba(255, 255, 255, 0.05);
+      padding: 30px;
+      border-radius: 16px;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.2);
+    }
+    h1 {
+      text-align: center;
+      font-size: 2.5rem;
+      margin-bottom: 20px;
+    }
+    label {
+      display: block;
+      margin: 10px 0 5px;
+      font-weight: bold;
+    }
+    input, textarea, button, select {
+      width: 100%;
+      padding: 12px;
+      font-size: 16px;
+      margin-bottom: 20px;
+      border-radius: 10px;
+      border: none;
+      box-sizing: border-box;
+    }
+    input[type="file"] {
+      background: #eee;
+      color: #333;
+    }
+    textarea {
+      resize: vertical;
+    }
+    .btn-group {
+      display: flex;
+      gap: 15px;
+      flex-wrap: wrap;
+    }
+    button {
+      background-color: #28a745;
+      color: white;
+      cursor: pointer;
+      transition: all 0.3s;
+      border: none;
+    }
+    button:hover {
+      background-color: #218838;
+    }
+    .secondary {
+      background-color: #007bff;
+    }
+    .secondary:hover {
+      background-color: #0056b3;
+    }
+    .danger {
+      background-color: #dc3545;
+    }
+    .danger:hover {
+      background-color: #a71d2a;
+    }
+    .preview-box {
+      background: rgba(255,255,255,0.1);
+      padding: 15px;
+      border-radius: 10px;
+      margin-bottom: 20px;
+      overflow-x: auto;
+    }
+    iframe {
+      width: 100%;
+      height: 300px;
+      border: none;
+      border-radius: 10px;
+      background: white;
+    }
+    .drop-zone {
+      padding: 20px;
+      background: rgba(255,255,255,0.1);
+      border: 2px dashed #ccc;
+      border-radius: 10px;
+      text-align: center;
+      margin-bottom: 20px;
+      color: #ccc;
+    }
+    .drop-zone.dragover {
+      background: rgba(255,255,255,0.2);
+      color: white;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Advanced App Packager</h1><label for="title">App Title</label>
+<input type="text" id="title" placeholder="Enter App Title">
+
+<label for="icon">App Icon (PNG)</label>
+<input type="file" id="icon" accept="image/png">
+
+<label for="thumbnail">App Thumbnail (PNG)</label>
+<input type="file" id="thumbnail" accept="image/png">
+
+<label for="description">App Description</label>
+<textarea id="description" rows="4" placeholder="Write a short app description..."></textarea>
+
+<label for="htmlText">HTML Code (Paste here if no file)</label>
+<textarea id="htmlText" rows="10" placeholder="Paste your app HTML code..."></textarea>
+
+<label for="htmlFiles">Upload HTML Files (Optional, multiple)</label>
+<input type="file" id="htmlFiles" accept=".html" multiple>
+
+<label for="extraFiles">Extra Files (Optional)</label>
+<input type="file" id="extraFiles" multiple>
+
+<div class="drop-zone" id="dropZone">Drag and drop extra files here</div>
+
+<div class="btn-group">
+  <button onclick="createZip()">Generate ZIP</button>
+  <button class="secondary" onclick="previewHtml()">Preview HTML</button>
+  <button class="danger" onclick="resetForm()">Reset Form</button>
+</div>
+
+<div class="preview-box" id="previewBox" style="display:none;"></div>
+<iframe id="previewFrame" style="display:none;"></iframe>
+
+  </div>  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>  <script>
+    const dropZone = document.getElementById('dropZone');
+    let droppedFiles = [];
+
+    dropZone.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      dropZone.classList.add('dragover');
+    });
+
+    dropZone.addEventListener('dragleave', () => {
+      dropZone.classList.remove('dragover');
+    });
+
+    dropZone.addEventListener('drop', (e) => {
+      e.preventDefault();
+      dropZone.classList.remove('dragover');
+      droppedFiles = [...e.dataTransfer.files];
+    });
+
+    window.onload = () => {
+      if (localStorage.getItem("appData")) {
+        const data = JSON.parse(localStorage.getItem("appData"));
+        document.getElementById('title').value = data.title;
+        document.getElementById('description').value = data.description;
+        document.getElementById('htmlText').value = data.htmlText;
+      }
+    };
+
+    function saveToLocalStorage() {
+      const data = {
+        title: document.getElementById('title').value.trim(),
+        description: document.getElementById('description').value.trim(),
+        htmlText: document.getElementById('htmlText').value.trim()
+      };
+      localStorage.setItem("appData", JSON.stringify(data));
+    }
+
+    async function createZip() {
+      const title = document.getElementById('title').value.trim();
+      const icon = document.getElementById('icon').files[0];
+      const thumbnail = document.getElementById('thumbnail').files[0];
+      const description = document.getElementById('description').value.trim();
+      const htmlText = document.getElementById('htmlText').value.trim();
+      const htmlFiles = document.getElementById('htmlFiles').files;
+      const extraFiles = [...document.getElementById('extraFiles').files, ...droppedFiles];
+
+      if (!title || !icon || !thumbnail || !description || (!htmlText && htmlFiles.length === 0)) {
+        alert('Please complete all required fields or provide HTML content.');
+        return;
+      }
+
+      saveToLocalStorage();
+
+      const zip = new JSZip();
+      zip.file("apptitle.txt", title);
+      zip.file("appdescription.txt", description);
+      zip.file("appicon.png", await icon.arrayBuffer());
+      zip.file("appthumbnail.png", await thumbnail.arrayBuffer());
+
+      if (htmlText) zip.file("apphtml.html", htmlText);
+
+      for (let file of htmlFiles) {
+        zip.file(file.name, await file.text());
+      }
+
+      for (let file of extraFiles) {
+        zip.file("extras/" + file.name, await file.arrayBuffer());
+      }
+
+      const blob = await zip.generateAsync({ type: "blob" });
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(blob);
+      a.download = `${title.replace(/\s+/g, '_')}_App.zip`;
+      a.click();
+    }
+
+    function previewHtml() {
+      const htmlText = document.getElementById('htmlText').value.trim();
+      const previewBox = document.getElementById('previewBox');
+      const previewFrame = document.getElementById('previewFrame');
+      if (htmlText) {
+        previewBox.style.display = 'none';
+        previewFrame.style.display = 'block';
+        const blob = new Blob([htmlText], { type: 'text/html' });
+        previewFrame.src = URL.createObjectURL(blob);
+      } else {
+        alert('Please enter HTML text to preview.');
+      }
+    }
+
+    function resetForm() {
+      document.getElementById('title').value = '';
+      document.getElementById('icon').value = '';
+      document.getElementById('thumbnail').value = '';
+      document.getElementById('description').value = '';
+      document.getElementById('htmlText').value = '';
+      document.getElementById('htmlFiles').value = '';
+      document.getElementById('extraFiles').value = '';
+      document.getElementById('previewBox').style.display = 'none';
+      document.getElementById('previewFrame').style.display = 'none';
+      localStorage.removeItem("appData");
+      droppedFiles = [];
+    }
+  </script></body>
+</html>
