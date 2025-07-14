@@ -118,8 +118,8 @@
 <label for="htmlText">HTML Code (Paste here if no file)</label>
 <textarea id="htmlText" rows="10" placeholder="Paste your app HTML code..."></textarea>
 
-<label for="htmlFiles">Upload HTML Files (Optional, multiple)</label>
-<input type="file" id="htmlFiles" accept=".html" multiple>
+<label for="htmlFiles">Upload HTML File (Only 1)</label>
+<input type="file" id="htmlFiles" accept=".html">
 
 <label for="extraFiles">Extra Files (Optional)</label>
 <input type="file" id="extraFiles" multiple>
@@ -178,10 +178,10 @@
       const thumbnail = document.getElementById('thumbnail').files[0];
       const description = document.getElementById('description').value.trim();
       const htmlText = document.getElementById('htmlText').value.trim();
-      const htmlFiles = document.getElementById('htmlFiles').files;
+      const htmlFile = document.getElementById('htmlFiles').files[0];
       const extraFiles = [...document.getElementById('extraFiles').files, ...droppedFiles];
 
-      if (!title || !icon || !thumbnail || !description || (!htmlText && htmlFiles.length === 0)) {
+      if (!title || !icon || !thumbnail || !description || (!htmlText && !htmlFile)) {
         alert('Please complete all required fields or provide HTML content.');
         return;
       }
@@ -194,10 +194,10 @@
       zip.file("appicon.png", await icon.arrayBuffer());
       zip.file("appthumbnail.png", await thumbnail.arrayBuffer());
 
-      if (htmlText) zip.file("apphtml.html", htmlText);
-
-      for (let file of htmlFiles) {
-        zip.file(file.name, await file.text());
+      if (htmlText) {
+        zip.file("apphtml.html", htmlText);
+      } else if (htmlFile) {
+        zip.file("apphtml.html", await htmlFile.text());
       }
 
       for (let file of extraFiles) {
